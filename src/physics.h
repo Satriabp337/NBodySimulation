@@ -3,9 +3,9 @@
 
 #include <cuda_runtime.h>
 
-const float G_CONST = 1.0f;
+const float G_CONST = 1.0f; //konstanta gravitasi
 const float SOFTENING = 10.0f;
-const float DT = 0.01f;
+const float DT = 0.01f; //waktu
 
 struct Particle {
     float2 pos; //x, y position
