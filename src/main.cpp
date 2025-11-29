@@ -67,5 +67,55 @@ int main () {
     //konfigurasi thread dan block
     int threadsPerBlock = 256;
     int blockPerGrid = (NUM_PARTICLES + threadsPerBlock - 1) / threadsPerBlock;
+
+    //setup visualisasi
+    sf::RenderWindow window (sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "CUDA N-BODY SIMULATION");
+    window.setFramerateLimit(60); //batasan 60 fps
     
+    sf::VertexArray visualParticles(sf::Points, NUM_PARTICLES);
+
+    while(window.isOpen()){
+        sf::Event event;
+
+        while(window.pollEvent(event)){
+            if (event.type == sf::Event::Closed)
+            window.close();
+        }
+
+        //hitung fisika (GPU)
+        launchCudaBody(d_particles, NUM_PARTICLES, blockPerGrid, threadsPerBlock);
+        
+        //copy data gpu ke cpu
+        copyFromDevice(host_particles.data(), d_particles, size);
+
+        //update visual
+        for(int i = 0; i < NUM_PARTICLES; i++){
+            float x = host_particles[i].pos.x;
+            float y = host_particles[i].pos.y;
+
+            if (i == 0) {
+                printf("P0: %.2f, %.2f\n", x, y);
+            }
+            
+            //set posisi
+            visualParticles[i].position = sf::Vector2f(x, y);
+
+            //pewarnaan
+            float speed = sqrt(host_particles[i].vel.x * host_particles[i].vel.x + 
+                                host_particles[i].vel.y * host_particles[i].vel.y);
+
+            int colorVal = std::min(255, (int)(speed * 200.0f)); //mapping kecepatan ke warna
+            visualParticles[i].color = sf::Color(255, 255 - colorVal, 255 - colorVal);
+        }
+
+        //render
+        window.clear(sf::Color::Black); //Hapus layar jadi hitam
+        window.draw(visualParticles);   //Gambar partikel
+        window.display();               //tampilkan
+    }
+
+    //cleanup
+    freeDeviceMemory(d_particles);
+
+    return 0;
 }

@@ -63,7 +63,7 @@ __global__ void bodyForce (Particle* p, float dt, int n){
     }
 }
 
-extern "C" void launcherCudaBody (Particle* d_particles, int n, int blocks, int threads) {
+extern "C" void launchCudaBody (Particle* d_particles, int n, int blocks, int threads) {
 
     //konfigurasi grid
     bodyForce <<<blocks, threads>>> (d_particles, DT, n);
