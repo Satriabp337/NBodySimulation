@@ -7,7 +7,7 @@
 //konfigurasi
 const int WINDOW_WIDTH = 1200;
 const int WINDOW_HEIGHT = 800;
-const int NUM_PARTICLES = 2048;
+const int NUM_PARTICLES = 10000;
 
 //fungsi random
 float randomFloat () {
@@ -23,7 +23,7 @@ void initParticles (std::vector<Particle> & particles) {
         Particle p;
 
         //sebaran partikel
-        float dist = randomFloat() * 300.0 + 10.0f;
+        float dist = randomFloat() * 200.0 + 10.0f;
 
         //lengkungan
         float angle = dist * 0.05f; 
@@ -100,8 +100,8 @@ int main () {
             float speed = sqrt(host_particles[i].vel.x * host_particles[i].vel.x + 
                                 host_particles[i].vel.y * host_particles[i].vel.y);
 
-            int colorVal = std::min(255, (int)(speed * 200.0f)); //mapping kecepatan ke warna
-            visualParticles[i].color = sf::Color(255, 255 - colorVal, 255 - colorVal);
+            int colorVal = std::min(255, (int)(speed * 300.0f)); //mapping kecepatan ke warna
+            visualParticles[i].color = sf::Color(colorVal, 255, 255);
         }
 
         //render
