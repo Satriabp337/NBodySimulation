@@ -31,7 +31,7 @@ __global__ void bodyForce (Particle* p, float dt, int n){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     if(i < n){
-        float dx, dy, distSq, dist, f, fx, fy;
+        float dx, dy, distSq, dist, f;
         float total_fx = 0.0f;
         float total_fy = 0.0f;
 

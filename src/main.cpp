@@ -1,30 +1,71 @@
-#include <SFML/Graphics.hpp>
-#include <iostream>
+#include <SFML/Graphics.hpp>    //grafis
+#include <vector>               //wadah data dinamis
+#include <cmath>                //sin, cos
+#include <cstdlib>              //random
+#include "physics.h"            
 
-// Deklarasi fungsi CUDA (nanti isinya di kernel.cu)
-void printCudaInfo(); 
+//konfigurasi
+const int WINDOW_WIDTH = 1200;
+const int WINDOW_HEIGHT = 800;
+const int NUM_PARTICLES = 2048;
 
-int main() {
-    // 1. Cek CUDA
-    std::cout << "Mengecek CUDA..." << std::endl;
-    printCudaInfo();
+//fungsi random
+float randomFloat () {
+    return static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+}
 
-    // 2. Cek SFML
-    sf::RenderWindow window(sf::VideoMode(800, 600), "N-Body Simulation (CUDA + SFML)");
-    sf::CircleShape shape(100.f);
-    shape.setFillColor(sf::Color::Green);
+void initParticles (std::vector<Particle> & particles) {
+    //pusat layar
+    float centerX = WINDOW_WIDTH / 2.0f;
+    float centerY = WINDOW_HEIGHT / 2.0f;
 
-    while (window.isOpen()) {
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
-                window.close();
-        }
+    for (int i = 0; i < NUM_PARTICLES; i++){
+        Particle p;
 
-        window.clear();
-        window.draw(shape);
-        window.display();
+        //sebaran partikel
+        float dist = randomFloat() * 300.0 + 10.0f;
+
+        //lengkungan
+        float angle = dist * 0.05f; 
+        angle += randomFloat() * 6.28f; //0 - 2phi
+
+        //konversi polar ke cartesian
+        p.pos.x = centerX * std::cos(angle) * dist; // x = r * cos (sudut)
+        p.pos.y = centerY * std::sin(angle) * dist; // y = r * cos (sudut)
+
+        //kecepatan orbit
+        float orbitalVel = std::sqrt(dist) * 0.5f;
+
+        //vektor tegak lurus dari sudut posisi
+        p.vel.x = -std::sin(angle) * orbitalVel;
+        p.vel.y = std::cos(angle) * orbitalVel;
+
+        //massa
+        p.mass = randomFloat() * 4.0f + 1.0f;
+
+        //Masukkan ke vector
+        particles.push_back(p);
     }
+}
 
-    return 0;
+int main () {
+    
+    //siapkan data di cpu
+    std::vector<Particle> host_particles;
+    
+    //isi data
+    initParticles(host_particles);
+
+    //total byte
+    size_t size = NUM_PARTICLES * sizeof(Particle);
+
+    //set up gpu
+    Particle* d_particles = nullptr;
+    allocatedDeviceMemory(&d_particles, size);
+    copyToDevice(d_particles, host_particles.data(), size);
+
+    //konfigurasi thread dan block
+    int threadsPerBlock = 256;
+    int blockPerGrid = (NUM_PARTICLES + threadsPerBlock - 1) / threadsPerBlock;
+    
 }
