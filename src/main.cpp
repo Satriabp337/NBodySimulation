@@ -30,8 +30,8 @@ void initParticles (std::vector<Particle> & particles) {
         angle += randomFloat() * 6.28f; //0 - 2phi
 
         //konversi polar ke cartesian
-        p.pos.x = centerX * std::cos(angle) * dist; // x = r * cos (sudut)
-        p.pos.y = centerY * std::sin(angle) * dist; // y = r * cos (sudut)
+        p.pos.x = centerX + std::cos(angle) * dist; // x = r * cos (sudut)
+        p.pos.y = centerY + std::sin(angle) * dist; // y = r * cos (sudut)
 
         //kecepatan orbit
         float orbitalVel = std::sqrt(dist) * 0.5f;
@@ -92,10 +92,6 @@ int main () {
         for(int i = 0; i < NUM_PARTICLES; i++){
             float x = host_particles[i].pos.x;
             float y = host_particles[i].pos.y;
-
-            if (i == 0) {
-                printf("P0: %.2f, %.2f\n", x, y);
-            }
             
             //set posisi
             visualParticles[i].position = sf::Vector2f(x, y);
