@@ -26,7 +26,8 @@ extern "C" void freeDeviceMemory (Particle* d_particles){
     cudaFree(d_particles);
 }
 
-__global__ void bodyForce (Particle* p, float dt, int n){
+
+__global__ void bodyForce (Particle* p, float dt, int n, float mouseX, float mouseY, bool isPressed){
 
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -34,6 +35,21 @@ __global__ void bodyForce (Particle* p, float dt, int n){
         float dx, dy, distSq, dist, f;
         float total_fx = 0.0f;
         float total_fy = 0.0f;
+
+        //dragging
+        if (isPressed) {
+            float dx = mouseX - p[i].pos.x;
+            float dy = mouseY - p[i].pos.y;
+            float distSq = dx*dx + dy*dy + 500.0f; // Softening besar biar smooth
+            float dist = sqrtf(distSq);
+            
+            // Kekuatan tarikan mouse (bisa diatur)
+            float mouseStrength = 20000.0f; // Coba nilai ini, sesuaikan jika kurang kuat
+            float f = mouseStrength / distSq;
+
+            total_fx += f * (dx / dist);
+            total_fy += f * (dy / dist);
+        }
 
         //looping interaksi dengan partikel lain
         for(int j = 0; j < n; j++){
@@ -62,11 +78,13 @@ __global__ void bodyForce (Particle* p, float dt, int n){
         p[i].pos.y += p[i].vel.y * dt;
     }
 }
+    
 
-extern "C" void launchCudaBody (Particle* d_particles, int n, int blocks, int threads) {
+
+extern "C" void launchCudaBody (Particle* d_particles, int n, int blocks, int threads, float mouseX, float mouseY, bool isPressed) {
 
     //konfigurasi grid
-    bodyForce <<<blocks, threads>>> (d_particles, DT, n);
+    bodyForce <<<blocks, threads>>> (d_particles, DT, n, mouseX, mouseY, isPressed);
 
     cudaDeviceSynchronize();
 
