@@ -20,16 +20,16 @@ void initParticles(std::vector<Particle> &particles)
     float centerX = 0.0f;
     float centerY = 0.0f;
     float coreMass = 10000.0f; // Massa Black Hole
-    float maxDist = 450.0f;    // Jari-jari piringan
+    float maxDist = 300.0f;    // Jari-jari piringan
 
-    // 1. Black Hole (Wajib ada biar stabil)
+    // 1. Black Hole
     Particle blackHole;
     blackHole.pos.x = centerX;
     blackHole.pos.y = centerY;
-    blackHole.vel.x = 0;
-    blackHole.vel.y = 0;
+    blackHole.vel.x = 0.0f;
+    blackHole.vel.y = 0.0f;
     blackHole.mass = coreMass;
-    blackHole.colorVal = 255;
+    blackHole.colorVal = 255; // Putih Terang
     particles.push_back(blackHole);
 
     // 2. Bintang-bintang
@@ -38,34 +38,30 @@ void initParticles(std::vector<Particle> &particles)
         Particle p;
 
         // --- LOGIKA DISK (PIRINGAN) ---
-        // Jarak Random: Kita pakai akar(random) agar sebarannya merata tapi tetap padat di tengah
-        // Kalau pakai random biasa, nanti tengahnya terlalu kosong.
         float r = maxDist * std::sqrt(randomFloat());
-        if (r < 15.0f)
-            r = 15.0f; // Jangan terlalu dekat black hole
+        if (r < 15.0f) r = 15.0f; // Jarak minimal
 
-        // Sudut Random (0 - 360 derajat bebas)
-        float theta = randomFloat() * 6.28318f;
+        float theta = randomFloat() * 6.28318f; // Sudut Acak
 
-        // Posisi Cartesian
+        // Posisi
         p.pos.x = centerX + r * std::cos(theta);
         p.pos.y = centerY + r * std::sin(theta);
 
-        // --- KECEPATAN ORBIT (KEPLER) ---
-        // V = sqrt(G * M / r)
-        float v = std::sqrt(0.5f * coreMass / r);
+        // --- KECEPATAN ORBIT (PERBAIKAN DI SINI) ---
+        // Gunakan G_CONST (1.0f) agar seimbang dengan tarikan gravitasi simulasi
+        float v = std::sqrt(G_CONST * coreMass / r);
 
-        // Variasi Kecepatan (PENTING!)
-        // Kita acak sedikit (0.8x sampai 1.2x) biar orbitnya lonjong-lonjong dikit (elips)
-        // Ini yang bikin galaksinya terlihat "hidup", bukan kayak piringan kaset yang kaku.
+        // Variasi orbit (biar agak lonjong/alami)
         float variation = 0.8f + (randomFloat() * 0.4f);
         v *= variation;
 
-        // Arah Tegak Lurus (Tangensial)
+        // Arah Velocity (Tegak Lurus)
         p.vel.x = -std::sin(theta) * v;
         p.vel.y = std::cos(theta) * v;
 
         p.mass = randomFloat() * 2.0f + 0.5f;
+        p.colorVal = 200; // Init warna default
+        
         particles.push_back(p);
     }
 }
@@ -102,6 +98,8 @@ int main()
 
     bool isDragging = false;
     sf::Vector2i lastMousePos;
+
+    bool useGPU = true;
 
     while (window.isOpen())
     {
@@ -157,6 +155,16 @@ int main()
                     lastMousePos = currentMousePos;
                 }
             }
+
+            //toggle
+            if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::Space) {
+                    useGPU = !useGPU;
+
+                    if (useGPU) window.setTitle("N-Body Simulation [Mode : GPU CUDA]");
+                    else window.setTitle("N-Body Simulation [Mode : CPU]");
+                }
+            }
         }
 
         sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
@@ -165,11 +173,15 @@ int main()
 
         bool isPressed = sf::Mouse::isButtonPressed(sf::Mouse::Left);
 
-        // hitung fisika (GPU)
-        launchCudaBody(d_particles, NUM_PARTICLES, blockPerGrid, threadsPerBlock, worldPos.x, worldPos.y, isPressed);
+        if (useGPU) {
+            // hitung fisika (GPU)
+            launchCudaBody(d_particles, NUM_PARTICLES, blockPerGrid, threadsPerBlock, worldPos.x, worldPos.y, isPressed);
 
-        // copy data gpu ke cpu
-        copyFromDevice(host_particles.data(), d_particles, size);
+            // copy data gpu ke cpu
+            copyFromDevice(host_particles.data(), d_particles, size);
+        } else {
+            cpuBodyInteraction(host_particles.data(), NUM_PARTICLES);
+        }
 
         // update visual
         for (int i = 0; i < NUM_PARTICLES; i++)

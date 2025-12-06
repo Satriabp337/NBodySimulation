@@ -2,6 +2,8 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
 
+#define BLOCK_SIZE 256
+
 //alokasi memory gppu
 extern "C" void allocatedDeviceMemory (Particle** d_particles, size_t size){
     
@@ -28,58 +30,80 @@ extern "C" void freeDeviceMemory (Particle* d_particles){
 
 
 __global__ void bodyForce (Particle* p, float dt, int n, float mouseX, float mouseY, bool isPressed){
+    
+    //alokasi shared memory 
+    __shared__ float3 sharedData [BLOCK_SIZE];
 
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int tid =  threadIdx.x;     //id local (0-255)
+    int i = blockIdx.x * blockDim.x + threadIdx.x; //id global
 
-    if(i < n){
-        float dx, dy, distSq, dist, f;
-        float total_fx = 0.0f;
-        float total_fy = 0.0f;
+    //simpan data diregister
+    float2 myPos;
+    float2 myVel;
 
-        //dragging
-        if (isPressed) {
-            float dx = mouseX - p[i].pos.x;
-            float dy = mouseY - p[i].pos.y;
-            float distSq = dx*dx + dy*dy + 500.0f; // Softening besar biar smooth
-            float dist = sqrtf(distSq);
-            
-            // Kekuatan tarikan mouse (bisa diatur)
-            float mouseStrength = 20000.0f; // Coba nilai ini, sesuaikan jika kurang kuat
-            float f = mouseStrength / distSq;
+    //load data vram
+    if(i < n) {
+        myPos = p[i].pos;
+        myVel = p[i].vel;
+    }
 
-            total_fx += f * (dx / dist);
-            total_fy += f * (dy / dist);
+    float accX = 0.0f;
+    float accY = 0.0f;
+
+    //logika mouse
+    if (i < n && isPressed) {
+        float dx = mouseX - myPos.x;
+        float dy = mouseY - myPos.y;
+        float distSq = dx*dx + dy*dy + 500.0f;
+        float f = 50000.0f / (distSq * sqrtf(distSq));
+        accX += f * dx;
+        accY += f * dy;
+    }
+
+    //loop tiling
+    for(int tile = 0; tile < gridDim.x; tile++) {
+        
+        //index global
+        int idx = tile * blockDim.x + tid;
+
+        if (idx < n) {
+            //ambil data dari vram
+            sharedData[tid] = make_float3(p[idx].pos.x, p[idx].pos.y, p[idx].mass);
+        } else {
+            sharedData[tid] = make_float3(0.0f, 0.0f, 0.0f);
         }
 
-        //looping interaksi dengan partikel lain
-        for(int j = 0; j < n; j++){
-            if (i == j) continue;
+        __syncthreads();
 
-            //hitung vektor
-            dx = p[j].pos.x - p[i].pos.x;
-            dy = p[j].pos.y - p[i].pos.y;
+        if (i < n) {
+            #pragma unroll
+            for (int k = 0; k < BLOCK_SIZE; k++) {
+                float3 other = sharedData[k];
 
-            //hitung jarak
-            distSq = dx*dx + dy*dy + SOFTENING*SOFTENING;
-            dist = sqrt(distSq);
+                float dx = other.x - myPos.x;
+                float dy = other.y - myPos.y;
+                float distSq = dx*dx + dy*dy + SOFTENING*SOFTENING;
 
-            //hitung rumus newton
-            f = (G_CONST * p[j].mass) / (dist * distSq);
+                float f = (G_CONST * other.z) / (distSq * sqrtf(distSq));
 
-            total_fx += f * dx;
-            total_fy += f * dy;
+                accX += f * dx;
+                accY += f * dy;
+            }
         }
 
-        //update
-        p[i].vel.x += total_fx * dt;
-        p[i].vel.y += total_fy * dt;
+        __syncthreads();
+    }
 
-        p[i].pos.x += p[i].vel.x * dt;
-        p[i].pos.y += p[i].vel.y * dt;
+    //update posisi akhir
+    if (i < n) {
+        myVel.x += accX * dt;
+        myVel.y += accY * dt;
+
+        p[i].vel = myVel;
+        p[i].pos.x += myVel.x * dt;
+        p[i].pos.y += myVel.y * dt;
     }
 }
-    
-
 
 extern "C" void launchCudaBody (Particle* d_particles, int n, int blocks, int threads, float mouseX, float mouseY, bool isPressed) {
 
