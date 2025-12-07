@@ -8,8 +8,8 @@
 #include "physics.h"
 
 // konfigurasi
-const int WINDOW_WIDTH = 1200;
-const int WINDOW_HEIGHT = 800;
+const int WINDOW_WIDTH = 1600;
+const int WINDOW_HEIGHT = 1200;
 const int NUM_PARTICLES = 10000;
 
 enum SimulationMode {CPU_SERIAL, CPU_OPENMP, GPU_CUDA};
@@ -71,15 +71,15 @@ void initParticles(std::vector<Particle> &particles) {
     int halfParticles = NUM_PARTICLES/2;
 
     createGalaxy(particles, halfParticles, 
-                 -400.0f, 0.0f,         //posisi
-                 0.3f, 0.2f,            //kecepatan gerak
-                 15000.0f, 350.0f,      //massa dan radius
+                 -350.0f, 0.0f,         //posisi
+                 1.0f, 0.4f,            //kecepatan gerak
+                 8000.0f, 350.0f,      //massa dan radius
                  100);                  //warna
 
     createGalaxy(particles, NUM_PARTICLES - halfParticles, 
-                 400.0f, 100.0f,         //posisi
-                 -0.3f, -0.2f,            //kecepatan gerak
-                 15000.0f, 350.0f,      //massa dan radius
+                 350.0f, 0.0f,         //posisi
+                 -1.0f, -0.4f,            //kecepatan gerak
+                 8000.0f, 350.0f,      //massa dan radius
                  200);                  //warna
 }
 
@@ -252,6 +252,8 @@ int main()
         // update visual
         for (int i = 0; i < NUM_PARTICLES; i++)
         {   
+            float x = host_particles[i].pos.x;
+            float y = host_particles[i].pos.y;
             float vx = host_particles[i].vel.x;
             float vy = host_particles[i].vel.y;
             float speed = std::sqrt(vx * vx + vy * vy);
@@ -268,6 +270,8 @@ int main()
             else {
                 visualParticles[i].color = sf::Color(255, speed*20, 50, 100);
             }
+
+            visualParticles[i].position = sf::Vector2f(x, y);
         }
 
         // render
