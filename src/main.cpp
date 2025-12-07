@@ -116,9 +116,8 @@ int main()
 
     bool isDragging = false;
     sf::Vector2i lastMousePos;
-
-        SimulationMode currentMode = GPU_CUDA;
-        SimulationMode currentMode = CPU_OPENMP; // Atau SERIAL
+    
+    SimulationMode currentMode = GPU_CUDA;
 
     //HUD
     sf::Font font;
