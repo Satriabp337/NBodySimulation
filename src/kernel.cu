@@ -58,7 +58,7 @@ __global__ void bodyForce (Particle* p, float dt, int n, float mouseX, float mou
         float f = 50000.0f / (distSq * sqrtf(distSq));
         accX += f * dx;
         accY += f * dy;
-    }
+    }   
 
     //loop tiling
     for(int tile = 0; tile < gridDim.x; tile++) {
