@@ -5,7 +5,7 @@
 
 #define G_CONST 1.0f //konstanta gravitasi
 #define SOFTENING 5.0f
-#define DT 0.1f //waktu
+#define DT 0.015f //waktu
 
 struct Particle {
     float2 pos; //x, y position

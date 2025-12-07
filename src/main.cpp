@@ -21,56 +21,66 @@ float randomFloat()
     return static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
 }
 
-void initParticles(std::vector<Particle> &particles)
-{
-    float centerX = 0.0f;
-    float centerY = 0.0f;
-    float coreMass = 10000.0f; // Massa Black Hole
-    float maxDist = 300.0f;    // Jari-jari piringan
+void createGalaxy(std::vector<Particle> &particles, int count, float offsetX, float offsetY, float velX, float velY, float coreMass, float radius, int colorBase) {
+    Particle blackhole;
+    blackhole.pos.x = offsetX;
+    blackhole.pos.y = offsetY;
+    blackhole.vel.x = velX;
+    blackhole.vel.y = velY;
+    blackhole.mass = coreMass;
+    blackhole.colorVal = 255;
+    particles.push_back(blackhole);
 
-    // 1. Black Hole
-    Particle blackHole;
-    blackHole.pos.x = centerX;
-    blackHole.pos.y = centerY;
-    blackHole.vel.x = 0.0f;
-    blackHole.vel.y = 0.0f;
-    blackHole.mass = coreMass;
-    blackHole.colorVal = 255; // Putih Terang
-    particles.push_back(blackHole);
-
-    // 2. Bintang-bintang
-    for (int i = 1; i < NUM_PARTICLES; i++)
-    {
+    for (int i = 1; i < count; i++) {
         Particle p;
 
-        // --- LOGIKA DISK (PIRINGAN) ---
-        float r = maxDist * std::sqrt(randomFloat());
-        if (r < 15.0f)
-            r = 15.0f; // Jarak minimal
+        // sebar partikel
+        float r = radius * std::sqrt(randomFloat());
+        if (r < 10.0f) r = 10.0f;
 
-        float theta = randomFloat() * 6.28318f; // Sudut Acak
+        float theta = randomFloat() * 6.28318f;
 
-        // Posisi
-        p.pos.x = centerX + r * std::cos(theta);
-        p.pos.y = centerY + r * std::sin(theta);
+        //posisi relatif terhadap pusat galaxy
+        float localX = r * std::cos(theta);  
+        float localY = r * std::sin(theta);
 
-        // --- KECEPATAN ORBIT (PERBAIKAN DI SINI) ---
-        // Gunakan G_CONST (1.0f) agar seimbang dengan tarikan gravitasi simulasi
+        //posisi global
+        p.pos.x = offsetX + localX;
+        p.pos.y = offsetY + localY;
+
+        //kecepatan orbit
         float v = std::sqrt(G_CONST * coreMass / r);
+        v *=(0.8f + randomFloat() * 0.4f);
 
-        // Variasi orbit (biar agak lonjong/alami)
-        float variation = 0.8f + (randomFloat() * 0.4f);
-        v *= variation;
-
-        // Arah Velocity (Tegak Lurus)
-        p.vel.x = -std::sin(theta) * v;
-        p.vel.y = std::cos(theta) * v;
+        //kecepatan total
+        p.vel.x = velX - std::sin(theta) * v;
+        p.vel.y = velY + std::cos(theta) * v;
 
         p.mass = randomFloat() * 2.0f + 0.5f;
-        p.colorVal = 200; // Init warna default
+        p.colorVal = colorBase;
 
         particles.push_back(p);
+ 
     }
+
+}
+
+void initParticles(std::vector<Particle> &particles) {
+    particles.clear();
+
+    int halfParticles = NUM_PARTICLES/2;
+
+    createGalaxy(particles, halfParticles, 
+                 -400.0f, 0.0f,         //posisi
+                 0.3f, 0.2f,            //kecepatan gerak
+                 15000.0f, 350.0f,      //massa dan radius
+                 100);                  //warna
+
+    createGalaxy(particles, NUM_PARTICLES - halfParticles, 
+                 400.0f, 100.0f,         //posisi
+                 -0.3f, -0.2f,            //kecepatan gerak
+                 15000.0f, 350.0f,      //massa dan radius
+                 200);                  //warna
 }
 
 int main()
@@ -197,7 +207,7 @@ int main()
 
         sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
 
-        sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos);
+        sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos, camera);
 
         bool isPressed = sf::Mouse::isButtonPressed(sf::Mouse::Left);
 
@@ -241,53 +251,23 @@ int main()
 
         // update visual
         for (int i = 0; i < NUM_PARTICLES; i++)
-        {
-            // 1. Ambil posisi & kecepatan dari CPU (host_particles)
-            float x = host_particles[i].pos.x;
-            float y = host_particles[i].pos.y;
+        {   
             float vx = host_particles[i].vel.x;
             float vy = host_particles[i].vel.y;
-
-            // 2. Set Posisi Visual
-            visualParticles[i].position = sf::Vector2f(x, y);
-
-            // 3. Hitung Kecepatan (Speed)
             float speed = std::sqrt(vx * vx + vy * vy);
+            int baseColor = host_particles[i].colorVal;
 
-            // 4. Logika Warna "Zarro Style" (Ungu -> Cyan -> Putih)
-            sf::Uint8 r, g, b, a;
-
-            // Tuning angka "5.0f" dan "15.0f" ini sesuai kecepatan rata-rata partikelmu.
-            // Jika partikelmu lambat, kecilkan angkanya (misal 2.0f dan 8.0f).
-
-            if (speed < 5.0f)
-            {
-                // PINGGIRAN: MERAH BATA / ORANYE GELAP
-                r = 150 + (int)(speed * 20); // 150 -> 250
-                g = 50 + (int)(speed * 10);  // 50 -> 100
-                b = 10;                      // Sedikit biru
-
-                a = (NUM_PARTICLES < 2000) ? 200 : 80;
-            }
-            else if (speed < 12.0f)
-            {
-                // TENGAH: EMAS / KUNING CERAH
-                r = 255;
-                g = 150 + (int)(speed * 8); // 150 -> 240 (Makin kuning)
-                b = 50;
-
-                a = (NUM_PARTICLES < 2000) ? 200 : 100;
-            }
-            else
-            {
-                // INTI: PUTIH KEKUNINGAN (SILAU)
-                r = 255;
-                g = 255;
-                b = 200; // Sedikit kuning
-                a = 255; // Solid
+            if (baseColor == 255) {
+                visualParticles[i].color = sf::Color::White;
             }
 
-            visualParticles[i].color = sf::Color(r, g, b, a);
+            else if (baseColor == 100) {
+                visualParticles[i].color = sf::Color(speed*10, speed*20, 255, 100);
+            } 
+            
+            else {
+                visualParticles[i].color = sf::Color(255, speed*20, 50, 100);
+            }
         }
 
         // render
