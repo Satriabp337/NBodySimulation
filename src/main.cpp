@@ -201,8 +201,6 @@ int main()
 
         bool isPressed = sf::Mouse::isButtonPressed(sf::Mouse::Left);
 
-        float dt = 0.01f;
-
         //hitung waktu fisika
         physicsClock.restart();
 

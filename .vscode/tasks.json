@@ -6,6 +6,7 @@
             "label": "Build CUDA N-Body",
             "command": "nvcc",
             "args": [
+                //"-x", "cu",
                 "${workspaceFolder}/src/main.cpp",
                 "${workspaceFolder}/src/kernel.cu",
                 "${workspaceFolder}/src/cpu_solver.cpp",               
