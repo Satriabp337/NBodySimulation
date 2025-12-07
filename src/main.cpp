@@ -1,8 +1,10 @@
 #include <SFML/Graphics.hpp> //grafis
+#include <iomanip> 
+#include <sstream> 
 #include <vector>            //wadah data dinamis
 #include <cmath>             //sin, cos
 #include <cstdlib>           //random
-#include <algorithm>
+#include <iostream>
 #include "physics.h"
 
 // konfigurasi
@@ -106,6 +108,22 @@ int main()
 
     SimulationMode currentMode = GPU_CUDA;
 
+    //HUD
+    sf::Font font;
+    if(!font.loadFromFile("arial.ttf")) {
+        std::cout << "gagal load font" << std::endl;
+    }
+
+    sf::Text statsText;
+    statsText.setFont(font);
+    statsText.setCharacterSize(18);
+    statsText.setFillColor(sf::Color::White);
+    statsText.setPosition(10.0f, 10.0f);
+
+    sf::Clock fpsClock;         //hitung fps render
+    sf::Clock physicsClock;    //hitung durasi
+
+
     while (window.isOpen())
     {
         sf::Event event;
@@ -183,6 +201,11 @@ int main()
 
         bool isPressed = sf::Mouse::isButtonPressed(sf::Mouse::Left);
 
+        float dt = 0.01f;
+
+        //hitung waktu fisika
+        physicsClock.restart();
+
         if (currentMode == GPU_CUDA)
         {
             // hitung fisika (GPU)
@@ -197,6 +220,26 @@ int main()
         } else if (currentMode == CPU_OPENMP) {
             cpuBodyInteractionOpenMP(host_particles.data(), NUM_PARTICLES);
         }
+
+        //stop stopwatch
+        float physicsTime = physicsClock.getElapsedTime().asMilliseconds();
+        
+        //hitung fps
+        float fps = 1.0f / fpsClock.restart().asSeconds();
+
+        //update HUD
+        std::string mode;
+        if(currentMode == GPU_CUDA) mode = "GPU CUDA";
+        else if (currentMode == CPU_SERIAL) mode = "CPU SERIAL";
+        else mode = "CPU OPENMP";
+
+        std::stringstream ss;
+        ss << "Mode: " << mode << "\n"
+           << "Particles: " << NUM_PARTICLES << "\n"
+           << "FPS: " << std::fixed << std::setprecision(1) << fps <<"\n"   
+           << "Physics Time: " << std::setprecision(2) << physicsTime <<"ms";
+
+        statsText.setString(ss.str());
 
         // update visual
         for (int i = 0; i < NUM_PARTICLES; i++)
@@ -250,11 +293,16 @@ int main()
         }
 
         // render
+        window.clear(sf::Color::Black); //bakcground
+
         window.setView(camera);
-        window.clear(sf::Color::Black); // Hapus layar jadi hitam
+
         sf::RenderStates states;
         states.blendMode = sf::BlendAdd;
         window.draw(visualParticles, states); // Gambar partikel
+
+        window.setView(window.getDefaultView());
+        window.draw(statsText);               // Gambar HUD
         window.display();                     // tampilkan
     }
 
