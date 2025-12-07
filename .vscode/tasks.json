@@ -3,10 +3,11 @@
     "tasks": [
         {
             "type": "shell",
-            "label": "Build CUDA N-Body",
+            "label": "Build Sandbox",
             "command": "nvcc",
             "args": [
                 "${workspaceFolder}/src/main.cpp",
+                "${workspaceFolder}/src/cpu_solver.cpp",
                 "${workspaceFolder}/src/kernel.cu",
                 "-o",
                 "${workspaceFolder}/bin/app.exe",
@@ -23,8 +24,7 @@
             "group": {
                 "kind": "build",
                 "isDefault": true
-            },
-            "detail": "Compiler menggunakan NVCC tanpa flag versi manual"
+            }
         }
     ]
 }
