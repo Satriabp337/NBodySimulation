@@ -5,7 +5,7 @@
 
 #define G_CONST 1.0f //konstanta gravitasi
 #define SOFTENING 5.0f
-#define DT 0.01f //waktu
+#define DT 0.1f //waktu
 
 struct Particle {
     float2 pos; //x, y position
@@ -17,6 +17,8 @@ struct Particle {
 
 //Fungction CPU
 void cpuBodyInteraction(Particle* particles, int n);
+//Fungction OPENMP
+void cpuBodyInteractionOpenMP(Particle* particles, int n);
 //Fungction Wrapper GPU
 extern "C" void launchCudaBody(Particle* d_particles, int n, int blocks, int threads, float mouseX, float mouseY, bool isPressed);
 //inisiasi memory GPU

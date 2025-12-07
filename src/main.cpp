@@ -2,12 +2,16 @@
 #include <vector>            //wadah data dinamis
 #include <cmath>             //sin, cos
 #include <cstdlib>           //random
+#include <algorithm>
 #include "physics.h"
 
 // konfigurasi
 const int WINDOW_WIDTH = 1200;
 const int WINDOW_HEIGHT = 800;
-const int NUM_PARTICLES = 50000;
+const int NUM_PARTICLES = 10000;
+
+enum SimulationMode {CPU_SERIAL, CPU_OPENMP, GPU_CUDA};
+ 
 
 // fungsi random
 float randomFloat()
@@ -39,7 +43,8 @@ void initParticles(std::vector<Particle> &particles)
 
         // --- LOGIKA DISK (PIRINGAN) ---
         float r = maxDist * std::sqrt(randomFloat());
-        if (r < 15.0f) r = 15.0f; // Jarak minimal
+        if (r < 15.0f)
+            r = 15.0f; // Jarak minimal
 
         float theta = randomFloat() * 6.28318f; // Sudut Acak
 
@@ -61,7 +66,7 @@ void initParticles(std::vector<Particle> &particles)
 
         p.mass = randomFloat() * 2.0f + 0.5f;
         p.colorVal = 200; // Init warna default
-        
+
         particles.push_back(p);
     }
 }
@@ -99,7 +104,7 @@ int main()
     bool isDragging = false;
     sf::Vector2i lastMousePos;
 
-    bool useGPU = true;
+    SimulationMode currentMode = GPU_CUDA;
 
     while (window.isOpen())
     {
@@ -156,13 +161,18 @@ int main()
                 }
             }
 
-            //toggle
-            if (event.type == sf::Event::KeyPressed) {
-                if (event.key.code == sf::Keyboard::Space) {
-                    useGPU = !useGPU;
-
-                    if (useGPU) window.setTitle("N-Body Simulation [Mode : GPU CUDA]");
-                    else window.setTitle("N-Body Simulation [Mode : CPU]");
+            // toggle
+            if (event.type == sf::Event::KeyPressed)
+            {
+                if (event.key.code == sf::Keyboard::Num1) {
+                    currentMode = GPU_CUDA;
+                    window.setTitle("Mode : GPU CUDA");
+                } else if (event.key.code == sf::Keyboard::Num2) {
+                    currentMode = CPU_SERIAL;
+                    window.setTitle("Mode : CPU SERIAL");
+                } else if (event.key.code == sf::Keyboard::Num3) {
+                    currentMode = CPU_OPENMP;
+                    window.setTitle("Mode : CPU OPENMP");
                 }
             }
         }
@@ -173,14 +183,19 @@ int main()
 
         bool isPressed = sf::Mouse::isButtonPressed(sf::Mouse::Left);
 
-        if (useGPU) {
+        if (currentMode == GPU_CUDA)
+        {
             // hitung fisika (GPU)
             launchCudaBody(d_particles, NUM_PARTICLES, blockPerGrid, threadsPerBlock, worldPos.x, worldPos.y, isPressed);
 
             // copy data gpu ke cpu
             copyFromDevice(host_particles.data(), d_particles, size);
-        } else {
+        }
+        else if (currentMode == CPU_SERIAL)
+        {
             cpuBodyInteraction(host_particles.data(), NUM_PARTICLES);
+        } else if (currentMode == CPU_OPENMP) {
+            cpuBodyInteractionOpenMP(host_particles.data(), NUM_PARTICLES);
         }
 
         // update visual
@@ -206,29 +221,29 @@ int main()
 
             if (speed < 5.0f)
             {
-                // LAMBAT (Pinggir) -> UNGU GELAP
-                // R tinggi, G rendah, B tinggi
-                r = 80 + (int)(speed * 20);
-                g = 0;
-                b = 200;
-                a = 30; // Sangat transparan (biar kalau numpuk jadi terang)
+                // PINGGIRAN: MERAH BATA / ORANYE GELAP
+                r = 150 + (int)(speed * 20); // 150 -> 250
+                g = 50 + (int)(speed * 10);  // 50 -> 100
+                b = 10;                      // Sedikit biru
+
+                a = (NUM_PARTICLES < 2000) ? 200 : 80;
             }
             else if (speed < 12.0f)
             {
-                // SEDANG (Orbit Stabil) -> CYAN / BIRU MUDA
-                // R rendah, G tinggi, B tinggi
-                r = 0;
-                g = 150 + (int)(speed * 5);
-                b = 255;
-                a = 60;
+                // TENGAH: EMAS / KUNING CERAH
+                r = 255;
+                g = 150 + (int)(speed * 8); // 150 -> 240 (Makin kuning)
+                b = 50;
+
+                a = (NUM_PARTICLES < 2000) ? 200 : 100;
             }
             else
             {
-                // NGEBUT (Dekat Blackhole) -> PUTIH MENYALA
+                // INTI: PUTIH KEKUNINGAN (SILAU)
                 r = 255;
                 g = 255;
-                b = 255;
-                a = 150; // Lebih solid
+                b = 200; // Sedikit kuning
+                a = 255; // Solid
             }
 
             visualParticles[i].color = sf::Color(r, g, b, a);

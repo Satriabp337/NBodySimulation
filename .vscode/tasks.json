@@ -8,13 +8,15 @@
             "args": [
                 "${workspaceFolder}/src/main.cpp",
                 "${workspaceFolder}/src/kernel.cu",
-                "-o",
-                "${workspaceFolder}/bin/app.exe",
+                "${workspaceFolder}/src/cpu_solver.cpp",               
+                "-o", "${workspaceFolder}/bin/app.exe",
                 "-I", "C:/SFML-2.6.1/include",
                 "-L", "C:/SFML-2.6.1/lib",
                 "-lsfml-graphics",
                 "-lsfml-window",
-                "-lsfml-system"
+                "-lsfml-system",    
+                "-Xcompiler", "/openMP",
+                "-Xcompiler", "/O2"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
