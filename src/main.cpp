@@ -228,7 +228,7 @@ int main()
         if (currentMode == GPU_CUDA)
         {
             #ifdef ENABLE_CUDA
-                launchCudaBody(..., isPressed);
+                launchCudaBody(launchCudaBody(d_particles, NUM_PARTICLES, blockPerGrid, threadsPerBlock, worldPos.x, worldPos.y, isPressed););
                 copyFromDevice(host_particles.data(), d_particles, size);
             #endif
         }
