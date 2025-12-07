@@ -98,10 +98,8 @@ int main()
     // set up gpu
     Particle *d_particles = nullptr;
 
-    #ifdef ENABLE_CUDA
     allocatedDeviceMemory(&d_particles, size);
     copyToDevice(d_particles, host_particles.data(), size);
-    #endif
 
     // konfigurasi thread dan block
     int threadsPerBlock = 256;
@@ -119,11 +117,8 @@ int main()
     bool isDragging = false;
     sf::Vector2i lastMousePos;
 
-    #ifdef ENABLE_CUDA
         SimulationMode currentMode = GPU_CUDA;
-    #else
         SimulationMode currentMode = CPU_OPENMP; // Atau SERIAL
-    #endif
 
     //HUD
     sf::Font font;
@@ -200,12 +195,8 @@ int main()
             if (event.type == sf::Event::KeyPressed)
             {
                 if (event.key.code == sf::Keyboard::Num1) {
-                    #ifdef ENABLE_CUDA
                         currentMode = GPU_CUDA;
                         window.setTitle("Mode: GPU CUDA");
-                    #else
-                        std::cout << "tidak ada nvidia!" << std::endl;
-                    #endif
                 } else if (event.key.code == sf::Keyboard::Num2) {
                     currentMode = CPU_SERIAL;
                     window.setTitle("Mode : CPU SERIAL");
@@ -227,10 +218,8 @@ int main()
 
         if (currentMode == GPU_CUDA)
         {
-            #ifdef ENABLE_CUDA
-                launchCudaBody(..., isPressed);
+                launchCudaBody(d_particles, NUM_PARTICLES, blockPerGrid, threadsPerBlock, worldPos.x, worldPos.y, isPressed);
                 copyFromDevice(host_particles.data(), d_particles, size);
-            #endif
         }
         else if (currentMode == CPU_SERIAL)
         {
@@ -299,8 +288,6 @@ int main()
     }
 
     // cleanup
-    #ifdef ENABLE_CUDA
         freeDeviceMemory(d_particles);
-    #endif
     return 0;
 }
