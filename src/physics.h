@@ -1,6 +1,6 @@
 #ifndef PHYSICS_H
 #define PHYSICS_H
-#include <cuda_runtime.h> // Cuma diload kalau ada CUDA
+#include <cuda_runtime.h>
 
 #define G_CONST 1.0f //konstanta gravitasi
 #define SOFTENING 5.0f

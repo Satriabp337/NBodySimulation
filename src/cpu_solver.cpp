@@ -20,9 +20,7 @@ void cpuBodyInteraction(Particle* particles, int n) {
             float distSq = dx*dx + dy*dy + SOFTENING * SOFTENING;
             float dist = std::sqrt(distSq);
 
-            // Rumus Gravitasi (Sama persis dengan Kernel CUDA)
             // F = G * m / r^3 * vector_r
-            // (Kita pakai r^3 di penyebut karena dikali dx/dy di pembilang)
             float f = (G_CONST * particles[j].mass) / (distSq * dist);
 
             fx += f * dx;
@@ -40,10 +38,6 @@ void cpuBodyInteraction(Particle* particles, int n) {
 }
 
 void cpuBodyInteractionOpenMP(Particle* particles, int n) {
-    
-    // GUNAKAN SCHEDULE(STATIC)
-    // Static membagi tugas di awal secara rata (misal: 0-1000 ke Core 1, 1001-2000 ke Core 2).
-    // Ini jauh lebih cepat untuk N-Body karena beban tiap partikel sama persis.
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < n; i++) {
         float fx = 0.0f;
