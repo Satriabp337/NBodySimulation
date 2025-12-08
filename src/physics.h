@@ -1,9 +1,6 @@
 #ifndef PHYSICS_H
 #define PHYSICS_H
 
-#ifdef __CUDACC__
-    #define ENABLE_CUDA
-#endif
 
 #ifdef ENABLE_CUDA
     #include <cuda_runtime.h> // Cuma diload kalau ada CUDA
